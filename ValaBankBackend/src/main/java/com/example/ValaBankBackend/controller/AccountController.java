@@ -1,5 +1,7 @@
 package com.example.ValaBankBackend.controller;
 
+import com.example.ValaBankBackend.dto.AccountResponseDTO;
+import com.example.ValaBankBackend.dto.CreateAccountDTO;
 import com.example.ValaBankBackend.entity.Account;
 import com.example.ValaBankBackend.service.AccountService;
 import lombok.RequiredArgsConstructor;
@@ -17,18 +19,20 @@ public class AccountController {
     private final AccountService accountService;
 
     @GetMapping
-    public ResponseEntity<List<Account>> getAllAccounts(){
+    public ResponseEntity<List<AccountResponseDTO>> getAllAccounts(){
        List<Account> accounts =  accountService.findAllAccounts();
-        return ResponseEntity.ok(accounts   );
+       List<AccountResponseDTO> accountsDto = accounts.stream().map(AccountResponseDTO::new).toList();
+
+        return ResponseEntity.ok(accountsDto);
     }
     @PostMapping
-    public ResponseEntity<Account> addAccount(@RequestBody Account account){
-        accountService.addAccount(account);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+    public ResponseEntity<AccountResponseDTO> addAccount(@RequestBody CreateAccountDTO dto){
+        AccountResponseDTO savedAccount = accountService.addAccount(dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(savedAccount);
     }
     @GetMapping("/{id}")
-    public ResponseEntity<Account> findAccountById(@PathVariable Long id){
+    public ResponseEntity<AccountResponseDTO> findAccountById(@PathVariable Long id){
         Account account = accountService.findById(id);
-        return ResponseEntity.ok(account);
+        return ResponseEntity.ok(new AccountResponseDTO(account));
     }
 }

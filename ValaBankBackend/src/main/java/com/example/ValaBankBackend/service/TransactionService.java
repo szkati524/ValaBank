@@ -21,7 +21,7 @@ public class TransactionService {
 
 
     @Transactional
-    public void Transaction(Account sender, Account receiver, BigDecimal amount,String title){
+    public void makeTransaction(Account sender, Account receiver, BigDecimal amount,String title){
 
         sender.setBalance(sender.getBalance().subtract(amount));
         receiver.setBalance(receiver.getBalance().add(amount));
