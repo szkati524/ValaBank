@@ -3,13 +3,17 @@ package com.example.ValaBankBackend.service;
 import com.example.ValaBankBackend.dto.AccountResponseDTO;
 import com.example.ValaBankBackend.dto.CreateAccountDTO;
 import com.example.ValaBankBackend.entity.Account;
+import com.example.ValaBankBackend.entity.Balance;
 import com.example.ValaBankBackend.entity.Client;
+import com.example.ValaBankBackend.enums.Currency;
 import com.example.ValaBankBackend.repository.AccountRepository;
 import com.example.ValaBankBackend.repository.ClientRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -25,7 +29,14 @@ public class AccountService {
         Client client = clientRepository.findById(dto.clientId())
                 .orElseThrow(() -> new EntityNotFoundException("Cannot find client with id: " + dto.clientId()));
         account.setClient(client);
+        Balance plnBalance = new Balance();
+        plnBalance.setCurrency(Currency.PLN);
+        plnBalance.setAmount(BigDecimal.ZERO);
+        plnBalance.setAccount(account);
+      account.getBalances().add(plnBalance);
+
         Account savedAccount = accountRepository.save(account);
+
         return new AccountResponseDTO(savedAccount);
 
 
@@ -48,7 +59,8 @@ public class AccountService {
     public Account mapToEntity(CreateAccountDTO dto){
         Account account = new Account();
         account.setAccountNumber(dto.accountNumber());
-        account.setBalance(dto.balance());
+        account.setBalances(new ArrayList<>());
+
         return account;
     }
 }

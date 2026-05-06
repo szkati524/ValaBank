@@ -1,5 +1,6 @@
 package com.example.ValaBankBackend.controller;
 
+import com.example.ValaBankBackend.dto.BalanceOperationDTO;
 import com.example.ValaBankBackend.dto.TransactionRequestDTO;
 import com.example.ValaBankBackend.entity.Account;
 import com.example.ValaBankBackend.entity.Transaction;
@@ -29,6 +30,18 @@ public class TransactionController {
          transactionService.makeTransaction(sender,receiver,request.amount(),request.title());
 
 
-        return ResponseEntity.ok("Transakcja udana");
+        return ResponseEntity.ok("Transaction Done!");
+    }
+    @PostMapping("/{id}/deposit")
+    public ResponseEntity<String> makeDeposit(@PathVariable Long id,@RequestBody BalanceOperationDTO dto){
+        Account receiver = accountService.findById(id);
+        transactionService.deposit(receiver,dto.amount());
+        return ResponseEntity.ok("Deposit Done!");
+    }
+    @PostMapping("/{id}/withdraw")
+    public ResponseEntity<String> makeWithdraw(@PathVariable Long id,@RequestBody BalanceOperationDTO dto){
+        Account sender = accountService.findById(id);
+        transactionService.withdraw(sender,dto.amount());
+        return ResponseEntity.ok("Withdraw Done!");
     }
 }

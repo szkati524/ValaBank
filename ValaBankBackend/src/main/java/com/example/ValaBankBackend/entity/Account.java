@@ -8,6 +8,8 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @NoArgsConstructor
@@ -19,7 +21,8 @@ public class Account {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private long accountNumber;
-    private BigDecimal balance;
+    @OneToMany(mappedBy = "account",cascade = CascadeType.ALL,orphanRemoval = true)
+    private List<Balance> balances;
     @Column(name="created_at", nullable = false,updatable = false)
     private LocalDateTime localDateTime = LocalDateTime.now();
     @ManyToOne
