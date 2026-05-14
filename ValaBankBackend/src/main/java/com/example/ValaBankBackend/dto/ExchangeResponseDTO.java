@@ -1,9 +1,8 @@
 package com.example.ValaBankBackend.dto;
 
-import com.example.ValaBankBackend.entity.Account;
 import com.example.ValaBankBackend.enums.Currency;
 
 import java.math.BigDecimal;
 
-public record BalanceOperationDTO(BigDecimal amount, Currency currency) {
+public record ExchangeResponseDTO(Currency from, Currency to, BigDecimal amount) {
 }

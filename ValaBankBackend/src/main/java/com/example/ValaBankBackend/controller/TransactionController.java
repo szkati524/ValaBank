@@ -1,6 +1,7 @@
 package com.example.ValaBankBackend.controller;
 
 import com.example.ValaBankBackend.dto.BalanceOperationDTO;
+import com.example.ValaBankBackend.dto.ExchangeResponseDTO;
 import com.example.ValaBankBackend.dto.TransactionRequestDTO;
 import com.example.ValaBankBackend.entity.Account;
 import com.example.ValaBankBackend.entity.Transaction;
@@ -23,25 +24,30 @@ public class TransactionController {
     private final TransactionService transactionService;
     private final AccountService accountService;
 
-    @PostMapping
+    @PostMapping("/transfer")
     public ResponseEntity<String> makeTransaction(@RequestBody TransactionRequestDTO request){
-        Account sender = accountService.findById(request.senderId().getId());
-        Account receiver = accountService.findById(request.receiverId().getId());
-         transactionService.makeTransaction(sender,receiver,request.amount(),request.title());
+        Account sender = accountService.findById(request.senderId());
+        Account receiver = accountService.findById(request.receiverId());
+         transactionService.makeTransaction(sender,receiver,request.amount(),request.title(),request.currency());
 
 
-        return ResponseEntity.ok("Transaction Done!");
+        return ResponseEntity.ok("Transaction of " + request.amount() + " " + request.currency() + " successful!");
     }
     @PostMapping("/{id}/deposit")
     public ResponseEntity<String> makeDeposit(@PathVariable Long id,@RequestBody BalanceOperationDTO dto){
-        Account receiver = accountService.findById(id);
-        transactionService.deposit(receiver,dto.amount());
-        return ResponseEntity.ok("Deposit Done!");
+        Account account = accountService.findById(id);
+        transactionService.deposit(account,dto.amount(),dto.currency());
+        return ResponseEntity.ok("Deposited " + dto.amount() + " " + dto.currency());
     }
     @PostMapping("/{id}/withdraw")
     public ResponseEntity<String> makeWithdraw(@PathVariable Long id,@RequestBody BalanceOperationDTO dto){
-        Account sender = accountService.findById(id);
-        transactionService.withdraw(sender,dto.amount());
-        return ResponseEntity.ok("Withdraw Done!");
+        Account account = accountService.findById(id);
+        transactionService.withdraw(account,dto.amount(),dto.currency());
+        return ResponseEntity.ok("Withdraw " + dto.amount() + " " + dto.currency());
+    }
+    @PostMapping("/accounts/{id}/exchange")
+    public ResponseEntity<String> exchangeCurrency(@PathVariable Long id, @RequestBody ExchangeResponseDTO dto){
+        transactionService.exchangeCurrency(id,dto.from(),dto.to(),dto.amount());
+        return ResponseEntity.ok("Exchanged " + dto.amount() + " " + dto.from() + " to " + dto.to());
     }
 }
