@@ -2,6 +2,7 @@ package com.example.ValaBankBackend.controller;
 
 import com.example.ValaBankBackend.dto.AccountResponseDTO;
 import com.example.ValaBankBackend.dto.CreateAccountDTO;
+import com.example.ValaBankBackend.dto.UpdateLimitsDTO;
 import com.example.ValaBankBackend.entity.Account;
 import com.example.ValaBankBackend.service.AccountService;
 import lombok.RequiredArgsConstructor;
@@ -34,5 +35,10 @@ public class AccountController {
     public ResponseEntity<AccountResponseDTO> findAccountById(@PathVariable Long id){
         Account account = accountService.findById(id);
         return ResponseEntity.ok(new AccountResponseDTO(account));
+    }
+    @PatchMapping("/{id}/limits")
+    public ResponseEntity<String> updateLimits(@PathVariable Long id, @RequestBody UpdateLimitsDTO dto){
+        accountService.updateLimits(id,dto);
+        return ResponseEntity.ok("Transaction limits updated successfully!");
     }
 }

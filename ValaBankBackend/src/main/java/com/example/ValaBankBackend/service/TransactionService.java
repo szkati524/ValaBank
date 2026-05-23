@@ -1,17 +1,18 @@
 package com.example.ValaBankBackend.service;
 
-import com.example.ValaBankBackend.entity.Account;
-import com.example.ValaBankBackend.entity.Balance;
-import com.example.ValaBankBackend.entity.Transaction;
+import com.example.ValaBankBackend.listener.BankEvent;
+import com.example.ValaBankBackend.entity.*;
 import com.example.ValaBankBackend.enums.Currency;
-import com.example.ValaBankBackend.repository.AccountRepository;
-import com.example.ValaBankBackend.repository.BalanceRepository;
-import com.example.ValaBankBackend.repository.TransactionRepository;
+import com.example.ValaBankBackend.enums.TransactionType;
+import com.example.ValaBankBackend.exceptions.LimitExceededException;
+import com.example.ValaBankBackend.repository.*;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 
@@ -23,17 +24,47 @@ public class TransactionService {
     private final AccountRepository accountRepository;
     private final BalanceRepository balanceRepository;
     private final CurrencyService currencyService;
+    private final TransactionHistoryRepository transactionHistoryRepository;
+    private final SavingGoalRepository savingGoalRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
 
     @Transactional
     public void makeTransaction(Account sender, Account receiver, BigDecimal amount,String title,Currency currency){
+
+        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+        BigDecimal currentDaySpent = transactionHistoryRepository.calculateOutgoingSumSince(sender.getId(),startOfDay);
+        BigDecimal potentialDailyTotal = currentDaySpent.add(amount);
+        if (sender.getDailyLimit() != null && potentialDailyTotal.compareTo(sender.getDailyLimit()) > 0) {
+            throw new LimitExceededException("Daily transaction limit exceeded! Allowed remaining: "
+            + sender.getDailyLimit().subtract(currentDaySpent) + " " + currency);
+        }
+        LocalDateTime startOfMonth = LocalDate.now().withDayOfMonth(1).atStartOfDay();
+        BigDecimal currentMonthSpent = transactionHistoryRepository.calculateOutgoingSumSince(sender.getId(),startOfMonth);
+        BigDecimal potentialMonthlyTotal = currentMonthSpent.add(amount);
+        if (sender.getMonthlyLimit() != null && potentialMonthlyTotal.compareTo(sender.getMonthlyLimit()) > 0 ){
+            throw new LimitExceededException("Monthly transaction limit exceeded! Allowed remaining: "
+            + sender.getMonthlyLimit().subtract(currentMonthSpent) + " " + currency);
+        }
+        BigDecimal roundingAmount = BigDecimal.ZERO;
+        if (sender.isSmartSaverEnabled() && sender.getActiveSavingGoal() != null && currency == Currency.PLN){
+            roundingAmount = calculateRounding(amount);
+}
+        BigDecimal totalAmountToDebit = amount.add(roundingAmount);
         Balance senderBalance = findBalance(sender,currency);
         Balance receiverBalance = findOrCreateBalance(receiver,currency);
-        if (senderBalance.getAmount().compareTo(amount) < 0){
+        if (senderBalance.getAmount().compareTo(totalAmountToDebit) < 0){
             throw new RuntimeException("insufficient funds in the account");
         }
-        senderBalance.setAmount(senderBalance.getAmount().subtract(amount));
+        BigDecimal balanceBefore = senderBalance.getAmount();
+        senderBalance.setAmount(senderBalance.getAmount().subtract(totalAmountToDebit));
         receiverBalance.setAmount(receiverBalance.getAmount().add(amount));
+        if (roundingAmount.compareTo(BigDecimal.ZERO) > 0){
+            SavingGoal goal = sender.getActiveSavingGoal();
+            goal.setCurrentAmount(goal.getCurrentAmount().add(roundingAmount));
+            savingGoalRepository.save(goal);
+            saveToHistory(sender.getId(),null,roundingAmount,currency,"Smart Saver auto-save to goal: " + goal.getName(),TransactionType.SAVING_GOAL_DEPOSIT);
+        }
 
        Transaction transaction = new Transaction();
        transaction.setSender(sender);
@@ -45,6 +76,14 @@ public class TransactionService {
        accountRepository.save(receiver);
        transactionRepository.save(transaction);
         System.out.println("Transaction done!");
+        BigDecimal warningLimit = new BigDecimal("50.00");
+        if (balanceBefore.compareTo(warningLimit) >= 0 && senderBalance.getAmount().compareTo(warningLimit)< 0){
+            eventPublisher.publishEvent(new BankEvent(
+                    sender.getClient().getId(),
+                    "low account balance remaining only: " + senderBalance.getAmount() + " PLN"
+            ));
+        }
+        saveToHistory(sender.getId(),receiver.getId(),amount,currency,title,TransactionType.TRANSFER);
 
     }
     @Transactional
@@ -88,7 +127,9 @@ public class TransactionService {
         accountRepository.save(receiver);
         transactionRepository.save(transaction);
         System.out.println("Deposit done!");
+        saveToHistory(null,receiver.getId(),amount,currency,"cash deposit",TransactionType.DEPOSIT);
     }
+
     @Transactional
     public void withdraw(Account payingAccount,BigDecimal amount,Currency currency){
 
@@ -105,6 +146,7 @@ public class TransactionService {
         accountRepository.save(payingAccount);
         transactionRepository.save(transaction);
         System.out.println("Withdraw done!");
+        saveToHistory(payingAccount.getId(),null,amount,currency,"cash withdraw",TransactionType.WITHDRAW);
     }
     private void validateAmount(BigDecimal amount){
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0){
@@ -116,6 +158,24 @@ public class TransactionService {
                 .filter(b -> b.getCurrency() == currency)
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("you don't have wallet in this currency"));
+    }
+    private BigDecimal calculateRounding(BigDecimal amount){
+        BigDecimal nextWholeAmount = amount.setScale(0,java.math.RoundingMode.CEILING);
+        if (nextWholeAmount.compareTo(amount) == 0){
+            return BigDecimal.ZERO;
+        }
+        return nextWholeAmount.subtract(amount);
+    }
+    private void saveToHistory(Long senderId, Long receiverId, BigDecimal amount, Currency currency, String title, TransactionType type){
+        TransactionHistory history = new TransactionHistory();
+        history.setSenderAccountId(senderId);
+        history.setReceiverAccountId(receiverId);
+        history.setAmount(amount);
+        history.setCurrency(currency);
+        history.setTitle(title);
+        history.setTimestamp(LocalDateTime.now());
+        history.setType(type);
+        transactionHistoryRepository.save(history);
     }
 }
 

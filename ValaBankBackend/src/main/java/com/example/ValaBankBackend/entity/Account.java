@@ -29,4 +29,11 @@ public class Account {
     @JoinColumn(name = "client_id")
     private Client client;
 
+    private java.math.BigDecimal dailyLimit = new BigDecimal("5000.00");
+    private java.math.BigDecimal monthlyLimit = new BigDecimal("20000.00");
+    private boolean smartSaverEnabled = false;
+    @OneToOne
+    @JoinColumn(name = "active_saving_goal_id")
+    private SavingGoal activeSavingGoal;
+
 }

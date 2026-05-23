@@ -2,13 +2,16 @@ package com.example.ValaBankBackend.service;
 
 import com.example.ValaBankBackend.dto.AccountResponseDTO;
 import com.example.ValaBankBackend.dto.CreateAccountDTO;
+import com.example.ValaBankBackend.dto.UpdateLimitsDTO;
 import com.example.ValaBankBackend.entity.Account;
 import com.example.ValaBankBackend.entity.Balance;
 import com.example.ValaBankBackend.entity.Client;
 import com.example.ValaBankBackend.enums.Currency;
+import com.example.ValaBankBackend.exceptions.LimitExceededException;
 import com.example.ValaBankBackend.repository.AccountRepository;
 import com.example.ValaBankBackend.repository.ClientRepository;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -49,13 +52,26 @@ public class AccountService {
               .orElseThrow(() -> new EntityNotFoundException("not found account with id: " + id));
 
     }
-    public void deleteAccountById(Long id){
-        if (accountRepository.existsById(id)){
+    public void deleteAccountById(Long id) {
+        if (accountRepository.existsById(id)) {
             accountRepository.deleteById(id);
-        }else {
+        } else {
             throw new RuntimeException("cannot find account with id: " + id);
         }
     }
+        @Transactional
+        public Account updateLimits(Long accountId, UpdateLimitsDTO dto) {
+            Account account = accountRepository.findById(accountId)
+                    .orElseThrow(() -> new EntityNotFoundException("Account not found"));
+            if (dto.dailyLimit() != null) {
+                account.setDailyLimit(dto.dailyLimit());
+
+            }
+            if (dto.monthlyLimit() != null) {
+                account.setMonthlyLimit(dto.monthlyLimit());
+            }
+            return accountRepository.save(account);
+        }
     public Account mapToEntity(CreateAccountDTO dto){
         Account account = new Account();
         account.setAccountNumber(dto.accountNumber());
