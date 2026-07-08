@@ -7,13 +7,13 @@ import com.example.ValaBankBackend.entity.Account;
 import com.example.ValaBankBackend.entity.Balance;
 import com.example.ValaBankBackend.entity.Client;
 import com.example.ValaBankBackend.enums.Currency;
-import com.example.ValaBankBackend.exceptions.LimitExceededException;
 import com.example.ValaBankBackend.repository.AccountRepository;
 import com.example.ValaBankBackend.repository.ClientRepository;
 import jakarta.persistence.EntityNotFoundException;
-import jakarta.transaction.Transactional;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -78,5 +78,11 @@ public class AccountService {
         account.setBalances(new ArrayList<>());
 
         return account;
+    }
+    @Transactional(readOnly = true)
+    public AccountResponseDTO searchByAccountNumber(long accountNumber){
+        return  accountRepository.findByAccountNumber(accountNumber)
+                .map(AccountResponseDTO::new)
+                .orElseThrow(() -> new EntityNotFoundException("Account not found with number: " + accountNumber));
     }
 }

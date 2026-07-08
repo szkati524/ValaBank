@@ -41,4 +41,9 @@ public class AccountController {
         accountService.updateLimits(id,dto);
         return ResponseEntity.ok("Transaction limits updated successfully!");
     }
+    @GetMapping("/search")
+    public ResponseEntity<AccountResponseDTO> searchByNumber(@RequestParam long accountNumber){
+       AccountResponseDTO response = accountService.searchByAccountNumber(accountNumber);
+       return ResponseEntity.ok(response);
+    }
 }
