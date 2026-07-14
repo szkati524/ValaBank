@@ -19,8 +19,8 @@ public class ClientController {
     private final ClientService clientService;
 
     @GetMapping
-    public ResponseEntity<List<ClientResponseDTO>> getAllClients(){
-        List<Client> clients = clientService.showAllClients();
+    public ResponseEntity<List<ClientResponseDTO>> getAllClients(@RequestParam(required = false) String search){
+        List<Client> clients = clientService.showAllClients(search);
         List<ClientResponseDTO> clientResponseDTOS = clients.stream().map(ClientResponseDTO::new).toList();
         return ResponseEntity.ok(clientResponseDTOS);
     }
@@ -35,4 +35,20 @@ public class ClientController {
 
         return ResponseEntity.ok(new ClientResponseDTO(client));
     }
+    @PutMapping("/{id}")
+    public ResponseEntity<ClientResponseDTO> updateClient(@PathVariable Long id,@RequestBody CreateClientDTO dto){
+        ClientResponseDTO updated = clientService.updateClient(id,dto);
+        return ResponseEntity.ok(updated);
+    }
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteClient(@PathVariable Long id){
+        clientService.deleteClientById(id);
+        return ResponseEntity.noContent().build();
+    }
+    @PatchMapping("/{id}/toggle-status")
+    public ResponseEntity<Void> toggleClientStatus(@PathVariable Long id){
+        clientService.toggleClientStatus(id);
+        return ResponseEntity.ok().build();
+    }
 }
+

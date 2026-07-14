@@ -32,6 +32,7 @@ public class AccountService {
         Client client = clientRepository.findById(dto.clientId())
                 .orElseThrow(() -> new EntityNotFoundException("Cannot find client with id: " + dto.clientId()));
         account.setClient(client);
+        account.setBlocked(false);
         Balance plnBalance = new Balance();
         plnBalance.setCurrency(Currency.PLN);
         plnBalance.setAmount(BigDecimal.ZERO);
@@ -79,10 +80,22 @@ public class AccountService {
 
         return account;
     }
+    @Transactional
+    public void toggleAccountLock(Long id){
+        Account account = findById(id);
+        account.setBlocked(!account.isBlocked());
+        accountRepository.save(account);
+    }
     @Transactional(readOnly = true)
     public AccountResponseDTO searchByAccountNumber(long accountNumber){
         return  accountRepository.findByAccountNumber(accountNumber)
                 .map(AccountResponseDTO::new)
                 .orElseThrow(() -> new EntityNotFoundException("Account not found with number: " + accountNumber));
+    }
+    @Transactional(readOnly = true)
+    public List<AccountResponseDTO> findAccountsByClientId(Long clientId){
+        return accountRepository.findByClientId(clientId).stream()
+                .map(AccountResponseDTO::new)
+                .toList();
     }
 }

@@ -46,4 +46,19 @@ public class AccountController {
        AccountResponseDTO response = accountService.searchByAccountNumber(accountNumber);
        return ResponseEntity.ok(response);
     }
+    @PatchMapping("/{id}/toggle-lock")
+    public ResponseEntity<Void> toggleAccountLock(@PathVariable Long id){
+        accountService.toggleAccountLock(id);
+        return ResponseEntity.ok().build();
+    }
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteAccount(@PathVariable Long id){
+        accountService.deleteAccountById(id);
+        return ResponseEntity.noContent().build();
+    }
+    @GetMapping("/client/{clientId}")
+    public ResponseEntity<List<AccountResponseDTO>> getAccountsByClientId(@PathVariable Long clientId){
+        List<AccountResponseDTO> accounts = accountService.findAccountsByClientId(clientId);
+        return ResponseEntity.ok(accounts);
+    }
 }

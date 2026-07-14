@@ -35,5 +35,6 @@ public class Account {
     @OneToOne
     @JoinColumn(name = "active_saving_goal_id")
     private SavingGoal activeSavingGoal;
+    private boolean blocked;
 
 }

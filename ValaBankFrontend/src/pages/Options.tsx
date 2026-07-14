@@ -67,7 +67,7 @@ export default function Options() {
 
            
             <button
-              onClick={() => alert('Moduł HR w budowie')}
+              onClick={() => navigate('/panel-hr')}
               disabled={!hasAccess(['ADMIN'])}
               className={`p-5 rounded-2xl border text-left flex items-center gap-4 group transition duration-300 ${
                 hasAccess(['ADMIN']) 

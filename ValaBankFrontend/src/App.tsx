@@ -10,12 +10,15 @@ import HistoryAndPDFPage from './pages/HistoryAndPDFPage';
 import StatisticPage from './pages/Statistic';
 import Options from './pages/Options';
 import ClientManagementPage from './pages/ClientManagmentPage';
+import HRPage from './pages/HRPage';
+import LoanApprovalsPage from './pages/LoanApprovalsPage';
+import Home from './pages/Home';
 
 function App() {
   return (
 <BrowserRouter>
 <Routes>
-  
+  <Route path="/" element={<Home/>} />
   <Route element={<MainLayout />}>
   <Route path="/" element={<Navigate to="/pulpit" replace />}/>
   <Route path="/pulpit" element={<Desk />} />
@@ -23,12 +26,13 @@ function App() {
   <Route path="/konto-oszczednosciowe" element={<SavingPage />} />
   <Route path ="/przelew" element={<TransactionPage/>} />
   <Route path="/kredyt" element={<LoanPage/>}/>
+  <Route path="/weryfikacja-kredytowa" element={<LoanApprovalsPage />} /> 
   <Route path="/historia-pdf" element={<HistoryAndPDFPage />} />
   <Route path="/statystyki" element={<StatisticPage />} />
   <Route path="/opcje" element={<Options />} />
   <Route path="/zarzadzanie-klientami" element={<ClientManagementPage />} />
- {/*} <Route path="/weryfikacja-kredytowa" element={<LoanApprovalsPage />} /> {*/}
- {/*} <Route path="/panel-hr" element={<EmployeeManagmentPage />} />{*/}
+ 
+  <Route path="/panel-hr" element={<HRPage />} />
   </Route>
 </Routes>
 </BrowserRouter>

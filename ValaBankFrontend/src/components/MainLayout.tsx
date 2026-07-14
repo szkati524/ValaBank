@@ -36,6 +36,7 @@ export default function MainLayout() {
                 <NavLink to="/konto-oszczednosciowe" className={navLinkClass}>Konto Oszczędnościowe</NavLink>
                 <NavLink to="/przelew" className={navLinkClass}>Przelew</NavLink>
                 <NavLink to="/kredyt" className={navLinkClass}>Kredyt</NavLink>
+                <NavLink to ="/weryfikacja-kredytowa" className={navLinkClass}>Zatwierdzenia Kredytu</NavLink>
                 <NavLink to="/historia-pdf" className={navLinkClass}>Historia i PDF</NavLink>
                 <NavLink to="/statystyki" className={navLinkClass}>Statystyki</NavLink>
                 <NavLink to="/opcje" className={navLinkClass}>Opcje</NavLink>
