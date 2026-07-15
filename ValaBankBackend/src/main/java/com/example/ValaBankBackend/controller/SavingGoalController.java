@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/saving-goals")
 @RequiredArgsConstructor
@@ -31,5 +33,19 @@ public class SavingGoalController {
     public ResponseEntity<String> activateSmartSaver(@PathVariable Long accountId,@PathVariable Long goalId){
         savingGoalService.activateSmartSaver(accountId,goalId);
         return ResponseEntity.ok("Smart saver has been activated with goal ID: " + goalId);
+    }
+    @GetMapping("/account/{accountId}")
+    public ResponseEntity<List<SavingGoalResponseDTO>> getAccountsGoals(@PathVariable Long accountId){
+        List<SavingGoalResponseDTO> list = savingGoalService.getGoalsByAccountId(accountId)
+                .stream()
+                .map(goal -> new SavingGoalResponseDTO(
+                        goal.getId(),
+                        goal.getName(),
+                        goal.getTargetAmount(),
+                        goal.getCurrentAmount(),
+                        goal.getAccount().getId()
+                ))
+                .toList();
+        return ResponseEntity.ok(list);
     }
 }

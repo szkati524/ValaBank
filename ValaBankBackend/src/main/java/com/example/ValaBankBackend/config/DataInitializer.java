@@ -32,7 +32,9 @@ public class DataInitializer implements CommandLineRunner {
             client1.setSurname("Kowalski");
             client1.setEmail("test@op.pl");
             client1.setBirthDate(LocalDate.parse("2005-05-05"));
-            clientRepository.save(client1);
+            client1.setActive(true);
+
+            Client savedClient1 = clientRepository.save(client1);
 
             Account account1 = new Account();
             account1.setAccountNumber(12345);
@@ -54,7 +56,8 @@ public class DataInitializer implements CommandLineRunner {
             client2.setSurname("Nowak");
             client2.setEmail("anna@op.pl");
             client2.setBirthDate(LocalDate.parse("2005-01-01"));
-            clientRepository.save(client2);
+            client2.setActive(true);
+           Client savedClient2 = clientRepository.save(client2);
 
             Account account2 = new Account();
             account2.setAccountNumber(67890);
@@ -70,6 +73,11 @@ public class DataInitializer implements CommandLineRunner {
             accountRepository.save(account2);
 
             System.out.println("Database initialized! Jan (ID: 1), Anna (ID: 2). ready for testing.");
+            System.out.println("=========================================================");
+            System.out.println("Database initialized successfully!");
+            System.out.println("Jan Kowalski created with REAL ID: " + savedClient1.getId());
+            System.out.println("Anna Nowak created with REAL ID: " + savedClient2.getId());
+            System.out.println("=========================================================");
         }
     }
 }

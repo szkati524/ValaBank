@@ -6,9 +6,12 @@ import com.example.ValaBankBackend.entity.SavingGoal;
 import com.example.ValaBankBackend.repository.AccountRepository;
 import com.example.ValaBankBackend.repository.SavingGoalRepository;
 import jakarta.persistence.EntityNotFoundException;
-import jakarta.transaction.Transactional;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -40,4 +43,8 @@ public class SavingGoalService {
         account.setActiveSavingGoal(goal);
         accountRepository.save(account);
     }
+@Transactional(readOnly = true)
+    public List<SavingGoal> getGoalsByAccountId(Long accountId){
+        return savingGoalRepository.findAllByAccountId(accountId);
+}
 }

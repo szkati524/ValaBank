@@ -4,5 +4,5 @@ import com.example.ValaBankBackend.enums.Currency;
 
 import java.math.BigDecimal;
 
-public record ExchangeResponseDTO(Currency from, Currency to, BigDecimal amount) {
+public record ExchangeResponseDTO(Long clientId,Currency from, Currency to, BigDecimal amount) {
 }
