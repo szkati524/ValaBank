@@ -23,7 +23,7 @@ public class PdfController {
 
     @GetMapping("/download/{senderId}")
     public ResponseEntity<byte[]> downloadStatement(@PathVariable Long senderId){
-        List<Transaction> history = transactionRepository.findBySenderId(senderId);
+        List<Transaction> history = transactionRepository.findBySenderIdOrReceiverIdOrderByTransactionDateDesc(senderId,senderId);
         byte[] pdfBytes = pdfService.generateTransactionHistoryPdf(history,"ACCOUNT-ID-"+senderId);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);

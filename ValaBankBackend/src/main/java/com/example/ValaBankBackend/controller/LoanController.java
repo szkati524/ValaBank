@@ -43,7 +43,7 @@ public class LoanController {
         return ResponseEntity.ok(loans);
     }
     @PostMapping("/{id}/overpay")
-    public ResponseEntity<String> overpayLoan(@PathVariable Long id, @RequestParam OverpaymentRequestDTO dto){
+    public ResponseEntity<String> overpayLoan(@PathVariable Long id, @RequestBody OverpaymentRequestDTO dto){
         loanService.overpay(id,dto.amount());
         return ResponseEntity.ok("Overpayment of " + dto.amount() + " PLN successful!");
     }

@@ -178,7 +178,7 @@ export default function Desk() {
           </button>
         </div>
 
-        {/* Analiza Finansowa */}
+       
         <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 backdrop-blur-md shadow-xl space-y-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-800 pb-3">
             <h3 className="text-lg font-bold text-slate-200">📊 Analiza Finansowa</h3>

@@ -1,59 +1,75 @@
-import { useState } from "react";
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
+import axios from "axios";
+
+
+const api = axios.create({
+  baseURL: 'http://localhost:8081',
+  withCredentials: true
+});
 
 
 interface FinancialReportDTO {
-  flowType: string;    // "INCOMING" lub "OUTGOING"
+  flowType: 'INCOMING' | 'OUTGOING'; 
   totalAmount: number; 
 }
 
 
-const CURRENT_USER_ID = 42;
+const CURRENT_USER_ID = 1;
 
 export default function StatisticPage() {
   const [reportData, setReportData] = useState<FinancialReportDTO[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
-
   useEffect(() => {
-
-    setTimeout(() => {
+    const fetchStatistics = async () => {
+      setIsLoading(true);
+      setError('');
       try {
-        const mockResponse: FinancialReportDTO[] = [
+        
+        const response = await api.get<FinancialReportDTO[]>(`/api/statistics/account/${CURRENT_USER_ID}`);
+        
+       
+        setReportData(Array.isArray(response.data) ? response.data : []);
+      } catch (err: any) {
+        console.error("Błąd podczas pobierania statystyk:", err);
+        setError('Nie udało się załadować statystyk miesięcznych z bazy danych ValaBank.');
+        
+       
+        setReportData([
           { flowType: 'INCOMING', totalAmount: 5200.00 },
           { flowType: 'OUTGOING', totalAmount: 2840.50 }
-        ];
-        setReportData(mockResponse);
-        setIsLoading(false);
-      } catch (err) {
-        setError('Nie udało się załadować statystyk miesięcznych.');
+        ]);
+      } finally {
         setIsLoading(false);
       }
-    }, 500);
+    };
+
+    fetchStatistics();
   }, []);
 
-  
+ 
   const incoming = reportData.find(r => r.flowType === 'INCOMING')?.totalAmount || 0;
   const outgoing = reportData.find(r => r.flowType === 'OUTGOING')?.totalAmount || 0;
   const totalVolume = incoming + outgoing; 
   const savingsDelta = incoming - outgoing;
 
  
-  const burnRatePercent = incoming > 0 ? Math.min((outgoing / incoming) * 105, 100) : 0;
+  const burnRatePercent = incoming > 0 ? Math.min((outgoing / incoming) * 100, 100) : 0;
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-64 text-sm font-mono text-emerald-400 animate-pulse">
-        ⏳ Analizowanie Twoich przepływów finansowych w tym miesiącu...
+      <div className="flex justify-center items-center h-64 text-sm font-mono text-cyan-400 animate-pulse">
+        ⏳ Analizowanie Twoich realnych przepływów finansowych w tym miesiącu...
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-4 rounded-xl text-xs font-mono">
-        ⚠️ {error}
+      <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-4 rounded-xl text-xs font-mono max-w-4xl mx-auto space-y-2">
+        <p>⚠️ {error}</p>
+        <p className="text-[10px] text-slate-500">Upewnij się, czy Spring Boot działa, a w kontrolerze dodałeś adnotację @CrossOrigin.</p>
       </div>
     );
   }
@@ -61,7 +77,7 @@ export default function StatisticPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       
-     
+   
       <div className="border-b border-slate-800 pb-3">
         <h2 className="text-2xl font-black text-white tracking-wide flex items-center gap-2">
           📊 Analiza Finansów i Statystyki
@@ -71,10 +87,9 @@ export default function StatisticPage() {
         </p>
       </div>
 
-     
+      
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        
-       
+  
         <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-5 backdrop-blur-md shadow-xl relative overflow-hidden">
           <div className="absolute top-0 right-0 p-4 text-xs font-bold text-slate-800 font-mono">IN</div>
           <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Suma Wpływów</p>
@@ -83,7 +98,7 @@ export default function StatisticPage() {
           </p>
         </div>
 
-       
+        
         <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-5 backdrop-blur-md shadow-xl relative overflow-hidden">
           <div className="absolute top-0 right-0 p-4 text-xs font-bold text-slate-800 font-mono">OUT</div>
           <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Suma Wydatków</p>
@@ -92,7 +107,7 @@ export default function StatisticPage() {
           </p>
         </div>
 
-      
+        
         <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-5 backdrop-blur-md shadow-xl relative overflow-hidden">
           <div className="absolute top-0 right-0 p-4 text-xs font-bold text-slate-800 font-mono">NET</div>
           <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Zostaje w kieszeni</p>
@@ -103,10 +118,10 @@ export default function StatisticPage() {
 
       </div>
 
-     
+   
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
-       
+    
         <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 backdrop-blur-md space-y-4">
           <h3 className="text-sm font-bold text-slate-200">Indeks Wydatków do Przychodów</h3>
           <p className="text-xs text-slate-400 leading-relaxed">
@@ -127,7 +142,7 @@ export default function StatisticPage() {
           </div>
         </div>
 
-     
+      
         <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 backdrop-blur-md flex flex-col justify-between">
           <h3 className="text-sm font-bold text-slate-200 mb-2">Struktura Wolumenu</h3>
           <div className="space-y-2 text-xs font-mono text-slate-400">
@@ -143,7 +158,9 @@ export default function StatisticPage() {
             </div>
             <div className="flex justify-between">
               <span>Kondycja konta:</span>
-              <span className="text-slate-300 italic">Stabilna</span>
+              <span className="text-slate-300 italic">
+                {burnRatePercent > 90 ? 'Napięta' : burnRatePercent > 60 ? 'Umiarkowana' : 'Stabilna'}
+              </span>
             </div>
           </div>
         </div>

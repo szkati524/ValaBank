@@ -1,4 +1,10 @@
 import React, { useState } from 'react';
+import axios from 'axios';
+
+const api = axios.create({
+  baseURL: 'http://localhost:8081',
+  withCredentials: true
+});
 
 
 
@@ -8,7 +14,6 @@ interface BalanceDTO {
   amount: number;
 }
 
-
 interface AccountResponseDTO {
   id: number;         
   accountNumber: number; 
@@ -16,23 +21,26 @@ interface AccountResponseDTO {
   clientId: number;    
 }
 
-interface FinancialReportDTO {
-  flowType: string;    // "INCOMING" / "OUTGOING"
-  totalAmount: number;
+interface TransactionHistoryDTO {
+  id: number;
+  partnerAccountId: number | null;
+  direction: 'INCOMING' | 'OUTGOING';
+  amount: number;
+  currency: string;
+  title: string;
+  timestamp: string;
+  type: string;
 }
 
 export default function HistoryAndPDFPage() {
-  
   const [inputAccountNumber, setInputAccountNumber] = useState('');
-  
-
   const [accountInfo, setAccountInfo] = useState<AccountResponseDTO | null>(null);
-  const [reportData, setReportData] = useState<FinancialReportDTO[] | null>(null);
+  const [historyData, setHistoryData] = useState<TransactionHistoryDTO[]>([]);
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-
+ 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputAccountNumber) return;
@@ -40,52 +48,77 @@ export default function HistoryAndPDFPage() {
     setIsLoading(true);
     setError('');
     setAccountInfo(null);
-    setReportData(null);
+    setHistoryData([]);
 
     try {
-     
-      const mockAccountResponse: AccountResponseDTO = {
+    
+      const accountRes = await api.get<AccountResponseDTO>(`/api/account/number/${inputAccountNumber}`);
+      const account = accountRes.data;
+      setAccountInfo(account);
+
+      if (account && account.id) {
+        
+        const historyRes = await api.get<TransactionHistoryDTO[]>(`/api/history/account/${account.id}`);
+        setHistoryData(Array.isArray(historyRes.data) ? historyRes.data : []);
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError('Nie znaleziono konta o podanym numerze lub wystąpił problem z połączeniem API.');
+      
+   
+      setAccountInfo({
         id: 42, 
         accountNumber: Number(inputAccountNumber),
         balances: [{ id: 1, currency: 'PLN', amount: 15450.00 }],
         clientId: 99
-      };
-
-     
-      const mockStatsResponse: FinancialReportDTO[] = [
-        { flowType: 'INCOMING', totalAmount: 7420.00 },
-        { flowType: 'OUTGOING', totalAmount: 3150.45 }
-      ];
-
-   
-      setAccountInfo(mockAccountResponse);
-      setReportData(mockStatsResponse);
-
-    } catch (err) {
-      setError('Nie znaleziono konta bankowego o podanym numerze lub wystąpił błąd komunikacji.');
+      });
+      setHistoryData([
+        { id: 1, partnerAccountId: 102, direction: 'INCOMING', amount: 7420.00, currency: 'PLN', title: 'Wypłata faktury', timestamp: '2026-07-15T12:00:00', type: 'TRANSFER' },
+        { id: 2, partnerAccountId: 105, direction: 'OUTGOING', amount: 3150.45, currency: 'PLN', title: 'Zakupy spożywcze', timestamp: '2026-07-16T15:30:00', type: 'TRANSFER' }
+      ]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  
-  const handleDownloadPdf = () => {
+  const handleDownloadPdf = async () => {
     if (!accountInfo) return;
     
-    
-    alert(`Inicjuję pobieranie dokumentu PDF z ValaBank API.\n` +
-          `Endpoint: /api/pdf/download/${accountInfo.id}\n` +
-          `Generowanie dla Klienta o ID: ${accountInfo.clientId}`);
+    try {
+     
+      const response = await api.get(`/api/pdf/download/${accountInfo.id}`, {
+        responseType: 'blob'
+      });
+
+     
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const link = document.createElement('a');
+      link.href = window.URL.createObjectURL(blob);
+      link.download = `balance_${accountInfo.id}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error("Błąd podczas pobierania pliku PDF:", err);
+      alert("Nie udało się pobrać pliku PDF. Upewnij się, czy Spring Boot działa i dodałeś @CrossOrigin do kontrolera.");
+    }
   };
 
-  const incoming = reportData?.find(r => r.flowType === 'INCOMING')?.totalAmount || 0;
-  const outgoing = reportData?.find(r => r.flowType === 'OUTGOING')?.totalAmount || 0;
+  
+  const incoming = historyData
+    .filter(item => item.direction === 'INCOMING')
+    .reduce((sum, item) => sum + Number(item.amount ?? 0), 0);
+
+  const outgoing = historyData
+    .filter(item => item.direction === 'OUTGOING')
+    .reduce((sum, item) => sum + Number(item.amount ?? 0), 0);
+
   const balanceDelta = incoming - outgoing;
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       
-      
+    
       <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 backdrop-blur-md shadow-xl">
         <div className="border-b border-slate-800/60 pb-3 mb-5">
           <h2 className="text-xl font-black text-white tracking-wide flex items-center gap-2">
@@ -123,9 +156,9 @@ export default function HistoryAndPDFPage() {
         </div>
       )}
 
-   
-      {!isLoading && accountInfo && reportData && (
-        <div className="space-y-6 animate-fadeIn">
+      
+      {!isLoading && accountInfo && (
+        <div className="space-y-6">
           
          
           <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-5 flex flex-col md:flex-row justify-between gap-4 text-sm">
@@ -143,7 +176,7 @@ export default function HistoryAndPDFPage() {
             </div>
           </div>
           
-         
+        
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 shadow-xl">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Suma Wpływów (INCOMING)</p>
@@ -160,21 +193,54 @@ export default function HistoryAndPDFPage() {
             </div>
 
             <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 shadow-xl">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Bilans Miesięczny</p>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Bilans z Okresu</p>
               <p className={`text-2xl font-black font-mono mt-2 ${balanceDelta >= 0 ? 'text-cyan-400' : 'text-amber-500'}`}>
                 {balanceDelta >= 0 ? '+' : ''}{balanceDelta.toLocaleString('pl-PL', { minimumFractionDigits: 2 })} PLN
               </p>
             </div>
           </div>
 
-          
+        
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+            <h3 className="font-bold text-white text-sm uppercase tracking-wider text-slate-400">Ostatnie operacje w bazie</h3>
+            {historyData.length === 0 ? (
+              <p className="text-xs font-mono text-slate-500 py-2">Brak zarejestrowanych transakcji dla tego konta.</p>
+            ) : (
+              <div className="overflow-x-auto text-xs font-mono">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-800 text-slate-400 font-bold">
+                      <th className="py-2">Data</th>
+                      <th className="py-2">Tytuł</th>
+                      <th className="py-2 text-right">Kwota</th>
+                      <th className="py-2 text-center">Typ</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/40 text-slate-300">
+                    {historyData.map((tx) => (
+                      <tr key={tx.id} className="hover:bg-slate-950/40">
+                        <td className="py-2.5 text-slate-500">{new Date(tx.timestamp).toLocaleString('pl-PL')}</td>
+                        <td className="py-2.5 font-sans font-medium text-slate-200">{tx.title}</td>
+                        <td className={`py-2.5 text-right font-bold ${tx.direction === 'INCOMING' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          {tx.direction === 'INCOMING' ? '+' : '-'}{Number(tx.amount ?? 0).toFixed(2)} {tx.currency}
+                        </td>
+                        <td className="py-2.5 text-center text-[10px] text-slate-400 bg-slate-950/50 rounded px-1.5 my-1 inline-block border border-slate-800/50">{tx.type}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+        
           <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 backdrop-blur-md shadow-xl flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="text-sm space-y-1 text-center md:text-left">
               <h3 className="font-bold text-white text-base flex items-center justify-center md:justify-start gap-2">
                 📄 Generuj Wyciąg Operacji (PDF)
               </h3>
               <p className="text-xs text-slate-400">
-                Pobierz wyciąg historii operacji zasilany bezpośrednio przez techniczne ID konta.
+                Pobierz oficjalny dokument wyciągu historii operacji zasilany bezpośrednio przez techniczne ID konta.
               </p>
             </div>
 
