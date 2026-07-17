@@ -116,7 +116,7 @@ export default function Options() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             
             <button
-              onClick={() => navigate('/kredyt')}
+              onClick={() => navigate('/weryfikacja-kredytowa')}
               className="p-5 rounded-2xl border border-slate-800 bg-slate-900/40 text-left hover:border-indigo-500/50 hover:bg-slate-900/80 transition duration-300 cursor-pointer flex items-center gap-4 group"
             >
               <div className="p-3 rounded-xl bg-indigo-500/10 text-indigo-400 group-hover:bg-indigo-500 text-xl group-hover:text-slate-950 transition duration-300">
