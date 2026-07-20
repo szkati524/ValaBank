@@ -3,6 +3,7 @@ package com.example.ValaBankBackend.service;
 import com.example.ValaBankBackend.dto.ClientResponseDTO;
 import com.example.ValaBankBackend.dto.CreateClientDTO;
 import com.example.ValaBankBackend.entity.Client;
+import com.example.ValaBankBackend.entity.User;
 import com.example.ValaBankBackend.repository.ClientRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
@@ -16,10 +17,14 @@ import java.util.List;
 public class ClientService {
 
     private final ClientRepository clientRepository;
+    private final UserService userService;
 
     public ClientResponseDTO addClient(CreateClientDTO dto){
         Client clientToSave = mapToEntity(dto);
         clientToSave.setActive(true);
+       User bankUser = userService.createUserForClient(dto.email());
+       clientToSave.setUser(bankUser);
+
         Client savedClient = clientRepository.save(clientToSave);
         return new ClientResponseDTO(savedClient);
     }

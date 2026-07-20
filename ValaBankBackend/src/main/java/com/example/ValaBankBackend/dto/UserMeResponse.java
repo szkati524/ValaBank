@@ -1,4 +1,4 @@
 package com.example.ValaBankBackend.dto;
 
-public record UserMeResponse(Long id,String username,String role) {
+public record UserMeResponse(Long id,String username,String role,String displayName) {
 }

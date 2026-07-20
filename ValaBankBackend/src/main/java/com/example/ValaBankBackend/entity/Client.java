@@ -27,4 +27,7 @@ public class Client {
     private LocalDate birthDate;
     @OneToMany(mappedBy = "client")
     private List<Account> accounts = new ArrayList<>();
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "user_id",referencedColumnName = "id")
+    private User user;
 }
