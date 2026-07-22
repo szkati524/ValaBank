@@ -7,17 +7,21 @@ export default function Home() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [isFirstLoginMode, setIsFirstLoginMode] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsLoading(true);
 
-    if (isFirstLoginMode) {
-      try {
+    try {
+      if (isFirstLoginMode) {
        
-        const response = await fetch(`http://localhost:8081/api/auth/first-login/verify?username=${username}`, {
-          method: 'POST'
+        const response = await fetch('http://localhost:8081/api/auth/first-login/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username }),
         });
 
         if (!response.ok) {
@@ -25,14 +29,8 @@ export default function Home() {
           throw new Error(errorText || 'Niepoprawny login lub konto jest już aktywne.');
         }
 
-       
         navigate('/first-password', { state: { username } });
-      } catch (err: any) {
-        setError(err.message || 'Wystąpił błąd podczas weryfikacji loginu.');
-      }
-    } else {
-      try {
-        
+      } else {
         const response = await fetch('http://localhost:8081/api/auth/login', {
           method: 'POST',
           headers: {
@@ -47,16 +45,22 @@ export default function Home() {
 
         const data = await response.json();
         
-     
+      
         localStorage.setItem('token', data.jwtToken || data.token);
 
-        console.log("Logowanie pomyślne!");
         navigate('/pulpit');
-      } catch (err: any) {
-        console.error("Błąd logowania:", err);
-        setError(err.message || 'Wystąpił błąd podczas logowania.');
       }
+    } catch (err: any) {
+      console.error("Błąd uwierzytelniania:", err);
+      setError(err.message || 'Wystąpił błąd podczas połączenia z serwerem.');
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  const toggleMode = (firstLogin: boolean) => {
+    setIsFirstLoginMode(firstLogin);
+    setError('');
   };
 
   return (
@@ -141,41 +145,52 @@ export default function Home() {
 
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-1.5 text-left">
-                  <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">
+                  <label htmlFor="username-input" className="text-[10px] font-mono text-slate-500 uppercase tracking-wider block">
                     Identyfikator (Login)
                   </label>
                   <input 
+                    id="username-input"
                     type="text" 
                     required
                     placeholder="np. VLB987654"
                     value={username}
                     onChange={e => setUsername(e.target.value)}
-                    className="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-3 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 transition"
+                    disabled={isLoading}
+                    className="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-3 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 transition disabled:opacity-50"
                   />
                 </div>
 
                 {!isFirstLoginMode && (
                   <div className="space-y-1.5 text-left">
                     <div className="flex justify-between items-center">
-                      <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">Hasło dostępu</label>
-                      <a href="#" className="text-[10px] text-emerald-400 hover:underline">Zapomniałeś hasła?</a>
+                      <label htmlFor="password-input" className="text-[10px] font-mono text-slate-500 uppercase tracking-wider block">
+                        Hasło dostępu
+                      </label>
+                      <a href="#reset-password" className="text-[10px] text-emerald-400 hover:underline">
+                        Zapomniałeś hasła?
+                      </a>
                     </div>
                     <input 
+                      id="password-input"
                       type="password" 
                       required
                       placeholder="••••••••"
                       value={password}
                       onChange={e => setPassword(e.target.value)}
-                      className="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-3 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 transition"
+                      disabled={isLoading}
+                      className="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-3 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 transition disabled:opacity-50"
                     />
                   </div>
                 )}
 
                 <button 
                   type="submit" 
-                  className="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold text-xs py-3.5 rounded-xl uppercase tracking-widest transition duration-300 shadow-lg shadow-emerald-500/10 cursor-pointer"
+                  disabled={isLoading}
+                  className="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold text-xs py-3.5 rounded-xl uppercase tracking-widest transition duration-300 shadow-lg shadow-emerald-500/10 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isFirstLoginMode ? "Rozpocznij Aktywację ⚡" : "Uzyskaj Dostęp 🔑"}
+                  {isLoading 
+                    ? "Przetwarzanie..." 
+                    : (isFirstLoginMode ? "Rozpocznij Aktywację ⚡" : "Uzyskaj Dostęp 🔑")}
                 </button>
               </form>
 
@@ -184,22 +199,24 @@ export default function Home() {
                   {isFirstLoginMode ? (
                     <>
                       Pamiętasz swoje hasło? <br />
-                      <span 
-                        onClick={() => { setIsFirstLoginMode(false); setError(''); }}
-                        className="text-emerald-400 font-bold hover:underline cursor-pointer"
+                      <button 
+                        type="button"
+                        onClick={() => toggleMode(false)}
+                        className="text-emerald-400 font-bold hover:underline cursor-pointer bg-transparent border-0 p-0 text-xs"
                       >
                         Wróć do tradycyjnego logowania
-                      </span>
+                      </button>
                     </>
                   ) : (
                     <>
                       Logujesz się po raz pierwszy? <br />
-                      <span 
-                        onClick={() => { setIsFirstLoginMode(true); setError(''); }} 
-                        className="text-emerald-400 font-bold hover:underline cursor-pointer"
+                      <button 
+                        type="button"
+                        onClick={() => toggleMode(true)} 
+                        className="text-emerald-400 font-bold hover:underline cursor-pointer bg-transparent border-0 p-0 text-xs"
                       >
                         Aktywuj dostęp tutaj
-                      </span>
+                      </button>
                     </>
                   )}
                 </p>

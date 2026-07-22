@@ -13,6 +13,7 @@ import ClientManagementPage from './pages/ClientManagmentPage';
 import HRPage from './pages/HRPage';
 import LoanApprovalsPage from './pages/LoanApprovalsPage';
 import Home from './pages/Home';
+import FirstPassword from './pages/FirstPassword';
 
 function App() {
   return (
@@ -33,6 +34,7 @@ function App() {
   <Route path="/zarzadzanie-klientami" element={<ClientManagementPage />} />
  
   <Route path="/panel-hr" element={<HRPage />} />
+  <Route path="/first-password" element={<FirstPassword/>} />
   </Route>
 </Routes>
 </BrowserRouter>

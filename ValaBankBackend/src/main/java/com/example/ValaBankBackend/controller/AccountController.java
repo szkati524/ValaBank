@@ -8,6 +8,8 @@ import com.example.ValaBankBackend.service.AccountService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,6 +22,7 @@ public class AccountController {
     private final AccountService accountService;
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('EMPLOYEE','MANAGER','ADMIN')")
     public ResponseEntity<List<AccountResponseDTO>> getAllAccounts(){
        List<Account> accounts =  accountService.findAllAccounts();
        List<AccountResponseDTO> accountsDto = accounts.stream().map(AccountResponseDTO::new).toList();
@@ -60,5 +63,13 @@ public class AccountController {
     public ResponseEntity<List<AccountResponseDTO>> getAccountsByClientId(@PathVariable Long clientId){
         List<AccountResponseDTO> accounts = accountService.findAccountsByClientId(clientId);
         return ResponseEntity.ok(accounts);
+    }
+    @GetMapping("/my-accounts")
+    public ResponseEntity<List<AccountResponseDTO>> getMyAccounts(Authentication authentication){
+        System.out.println("Zalogowany username z JWT: " + authentication.getName());
+        List<AccountResponseDTO> accounts = accountService.findAccountsByUsername(authentication.getName());
+        System.out.println("Liczba znalezionych kont: " + accounts.size());
+        return ResponseEntity.ok(accounts);
+
     }
 }

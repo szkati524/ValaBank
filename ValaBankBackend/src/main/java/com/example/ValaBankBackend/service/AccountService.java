@@ -6,9 +6,11 @@ import com.example.ValaBankBackend.dto.UpdateLimitsDTO;
 import com.example.ValaBankBackend.entity.Account;
 import com.example.ValaBankBackend.entity.Balance;
 import com.example.ValaBankBackend.entity.Client;
+import com.example.ValaBankBackend.entity.User;
 import com.example.ValaBankBackend.enums.Currency;
 import com.example.ValaBankBackend.repository.AccountRepository;
 import com.example.ValaBankBackend.repository.ClientRepository;
+import com.example.ValaBankBackend.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 
 import lombok.RequiredArgsConstructor;
@@ -26,6 +28,7 @@ public class AccountService {
 
     private final AccountRepository accountRepository;
     private final ClientRepository clientRepository;
+    private final UserRepository userRepository;
 
     public AccountResponseDTO addAccount(CreateAccountDTO dto){
         Account account = mapToEntity(dto);
@@ -98,4 +101,20 @@ public class AccountService {
                 .map(AccountResponseDTO::new)
                 .toList();
     }
+    @Transactional(readOnly = true)
+    public List<AccountResponseDTO> findAccountsByUsername(String username) {
+
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Użytkownik nie znaleziony"));
+
+
+        if (user.getClient() == null) {
+            return List.of();
+        }
+
+        return accountRepository.findByClient(user.getClient()).stream()
+                .map(AccountResponseDTO::new)
+                .toList();
+    }
 }
+

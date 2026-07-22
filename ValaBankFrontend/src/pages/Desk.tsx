@@ -2,27 +2,38 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-
+// Konfiguracja Axiosa
 const api = axios.create({
   baseURL: 'http://localhost:8081',
   withCredentials: true
 });
 
+// Interceptor dołączający token JWT do każdego zapytania
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token'); 
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
+// Interfejsy dopasowane do Twojego backendu w Java/Spring
 interface BalanceDTO {
   id: number;
   amount: number;
   currency: string;
 }
 
-
 interface AccountResponseDTO {
   id: number;
   accountNumber: number;
-  balances: BalanceDTO[];
+  balances?: BalanceDTO[]; // dopuszczamy też 'balance' awaryjnie w logice poniżej
+  balance?: BalanceDTO[];
   clientId: number | null;
 }
-
 
 interface RateItem {
   currency: string;
@@ -33,18 +44,22 @@ export default function Desk() {
   const navigate = useNavigate();
   const [activeStatTab, setActiveStatTab] = useState<'general' | 'income' | 'expenses'>('general');
 
-  
   const [rates, setRates] = useState<RateItem[]>([]);
   const [balances, setBalances] = useState<BalanceDTO[]>([]);
   const [loadingRates, setLoadingRates] = useState<boolean>(true);
   const [loadingBalances, setLoadingBalances] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-
-  const loggedInClientId = 1;
-
   useEffect(() => {
-   
+    // 1. Sprawdzamy czy użytkownik posiada token JWT
+    const token = localStorage.getItem('token');
+    if (!token) {
+      console.warn("Brak tokena JWT. Przekierowanie do logowania...");
+      navigate('/');
+      return;
+    }
+
+    // 2. Pobieramy kursy walut z NBP
     api.get('/api/currencies/rates')
       .then(response => {
         const mappedRates: RateItem[] = Object.entries(response.data).map(([currency, rate]) => ({
@@ -57,45 +72,47 @@ export default function Desk() {
         }
 
         setRates(mappedRates);
-        setLoadingRates(false);
       })
       .catch(err => {
         console.error("Błąd podczas pobierania kursów walut:", err);
-        setError("Nie udało się pobrać aktualnych kursów.");
-        setLoadingRates(false);
-      });
+      })
+      .finally(() => setLoadingRates(false));
 
-   
-    api.get(`/api/account/client/${loggedInClientId}`)
+    // 3. Pobieramy konta zalogowanego użytkownika (/api/account/my-accounts)
+    api.get('/api/account/my-accounts')
       .then(response => {
-        const accounts: AccountResponseDTO[] = response.data;
+        const rawData = response.data;
+        const accounts: AccountResponseDTO[] = Array.isArray(rawData) ? rawData : [rawData];
         
-        
-        const allBalances: BalanceDTO[] = accounts.flatMap((account) => 
-          account.balances.map((b) => ({
+        // Bezpieczne mapowanie sald niezależnie od nazwy pola (balances / balance)
+        const allBalances: BalanceDTO[] = accounts.flatMap((account) => {
+          const balancesList = account.balances || account.balance || [];
+          return balancesList.map((b) => ({
             id: b.id, 
-            amount: b.amount,
+            amount: Number(b.amount), 
             currency: b.currency
-          }))
-        );
+          }));
+        });
 
         setBalances(allBalances);
-        setLoadingBalances(false);
       })
       .catch(err => {
-        console.warn("Brak połączenia z API kont. Używam danych demonstracyjnych (fallback):", err);
-        setBalances([
-          { id: 1, amount: 12500.50, currency: 'PLN' },
-          { id: 2, amount: 850.00, currency: 'EUR' }
-        ]);
-        setLoadingBalances(false);
-      });
-  }, [loggedInClientId]);
+        console.error("Błąd pobierania kont z API:", err);
+        if (err.response?.status === 401 || err.response?.status === 403) {
+          localStorage.removeItem('token');
+          navigate('/');
+        } else {
+          setError("Nie udało się załadować stanu konta.");
+        }
+      })
+      .finally(() => setLoadingBalances(false));
+
+  }, [navigate]); 
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start p-4 bg-slate-950 min-h-screen text-slate-100">
       
-   
+      {/* Sekcja Kursów Walut */}
       <div className="lg:col-span-1 bg-slate-900/60 border border-slate-800 rounded-2xl p-4 backdrop-blur-md shadow-xl">
         <h3 className="text-lg font-bold text-slate-200 mb-3 flex items-center gap-2">
           💱 Kursy Walut <span className="text-xs text-slate-500 font-normal">(NBP)</span>
@@ -116,11 +133,14 @@ export default function Desk() {
                     Łączenie z API...
                   </td>
                 </tr>
+              ) : rates.length === 0 ? (
+                <tr>
+                  <td colSpan={2} className="p-4 text-center text-xs text-slate-500">Brak danych</td>
+                </tr>
               ) : (
                 rates.map((item) => (
                   <tr key={item.currency} className="hover:bg-slate-800/30 transition">
                     <td className="p-3 font-bold text-emerald-400">{item.currency}</td>
-                  
                     <td className="p-3 text-right font-mono">{item.rate.toFixed(2)} zł</td>
                   </tr>
                 ))
@@ -130,16 +150,27 @@ export default function Desk() {
         </div>
       </div>
 
-   
+      {/* Główna sekcja - Stan Konta i Akcje */}
       <div className="lg:col-span-3 space-y-6">
         
-    
+        {/* Stan Konta */}
         <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 backdrop-blur-md shadow-xl">
           <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Stan Konta</h3>
+          
+          {error && (
+            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs font-mono">
+              ⚠️ {error}
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {loadingBalances ? (
               <div className="col-span-2 text-center py-6 text-slate-500 text-xs font-mono animate-pulse">
-                Autoryzacja dostępu do portfela...
+                Pobieranie salda...
+              </div>
+            ) : balances.length === 0 ? (
+              <div className="col-span-2 text-center py-6 text-slate-400 text-xs font-mono">
+                Brak przypisanych subkont/sald dla tego użytkownika.
               </div>
             ) : (
               balances.map((balance) => (
@@ -147,7 +178,7 @@ export default function Desk() {
                   <div>
                     <p className="text-xs text-slate-500 font-medium">Środki dostępne</p>
                     <p className="text-2xl font-black text-white font-mono mt-1">
-                      {balance.amount.toLocaleString('pl-PL', { minimumFractionDigits: 2 })}
+                      {balance.amount.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   </div>
                   <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-extrabold px-3 py-1 rounded-md tracking-wider">
@@ -159,7 +190,7 @@ export default function Desk() {
           </div>
         </div>
 
-       
+        {/* Baner Przelewu */}
         <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 backdrop-blur-md shadow-xl flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
@@ -178,7 +209,7 @@ export default function Desk() {
           </button>
         </div>
 
-       
+        {/* Analiza Finansowa */}
         <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 backdrop-blur-md shadow-xl space-y-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-800 pb-3">
             <h3 className="text-lg font-bold text-slate-200">📊 Analiza Finansowa</h3>
@@ -209,7 +240,7 @@ export default function Desk() {
             {activeStatTab === 'general' && (
               <div className="text-center space-y-1">
                 <p className="text-slate-300 font-medium">Bieżący bilans przepływu gotówki</p>
-                <p className="text-xs text-slate-500">Dane zagregowane za pomocą zapytań JPQL z bazy danych.</p>
+                <p className="text-xs text-slate-500">Podsumowanie salda Twoich kont.</p>
               </div>
             )}
             {activeStatTab === 'income' && (
@@ -221,7 +252,7 @@ export default function Desk() {
             {activeStatTab === 'expenses' && (
               <div className="text-center space-y-1">
                 <p className="text-rose-400 font-bold text-lg">- 1 230,40 zł</p>
-                <p className="text-xs text-slate-400">Największe obciążenia: Smart Saver, Autopłatności.</p>
+                <p className="text-xs text-slate-400">Największe obciążenia: Opłaty i przelewy wychodzące.</p>
               </div>
             )}
           </div>
